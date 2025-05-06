@@ -1,0 +1,98 @@
+// PitchClassTracker.js
+
+// Declare an array to store the pitch classes
+var pitchClasses = [];
+var N = 12; // Default number of pitch classes to keep
+
+// Function to set N (how many pitch classes to track)
+function setN(val) {
+    if (val > 0) {
+        N = val;
+        while (pitchClasses.length > N) {
+            pitchClasses.shift(); // Trim the array if N is reduced
+        }
+        outlet(0, pitchClasses); // Output the updated array to the first outlet
+    } else {
+        post("Error: N must be greater than 0.\n");
+    }
+}
+
+// Function to add a user pitch
+
+// Function to add a user pitch
+function userPitch(pitch) {
+    var pitchClass = pitch % 12; // Calculate the pitch class
+
+    // Remove any existing instance of this pitch class
+    var index = pitchClasses.indexOf(pitchClass);
+    if (index !== -1) {
+        pitchClasses.splice(index, 1); // Remove the duplicate, shifting others automatically
+    }
+
+    // Add the new pitch class
+    pitchClasses.push(pitchClass);
+
+    // Enforce the size limit of N
+    if (pitchClasses.length > N) {
+        pitchClasses.shift(); // Remove the oldest element
+    }
+
+    // Map pitch classes to kslider keys (48–59)
+    var highlightedKeys = pitchClasses.map(function(pc) {
+        return 48 + pc;
+    });
+
+    outlet(1, highlightedKeys); // Output the updated highlighted keys to the second (right) outlet
+}
+
+
+
+// Function to quantize a pitch to the closest pitch class
+function quantizePitch(pitch) {
+    if (pitchClasses.length === 0) {
+        post("Error: No pitch classes available for quantization.\n");
+        return;
+    }
+
+    var pitchClass = pitch % 12; // Calculate the pitch class
+    var closestPitchClass = pitchClasses[0];
+    var minDistance = Math.abs(pitchClass - closestPitchClass);
+
+    // Find the closest pitch class
+    for (var i = 1; i < pitchClasses.length; i++) {
+        var distance = Math.abs(pitchClass - pitchClasses[i]);
+
+        // Adjust for circular wrapping of pitch classes
+        if (distance > 6) {
+            distance = 12 - distance;
+        }
+
+        if (distance < minDistance) {
+            minDistance = distance;
+            closestPitchClass = pitchClasses[i];
+        }
+    }
+
+    // Calculate the quantized pitch based on the original pitch
+    var quantizedPitch = pitch - (pitchClass - closestPitchClass);
+
+    // Output the quantized pitch to the  first (left) outlet
+    outlet(0, quantizedPitch);
+}
+
+// Clear the pitch class tracker
+function clear() {
+    pitchClasses = [];
+    outlet(1, pitchClasses); // Output the cleared array to the first outlet
+}
+
+// Post the current pitch classes to the Max console
+function print() {
+    post("Current pitch classes: " + pitchClasses.join(", ") + "\n");
+    outlet(1, pitchClasses); // Output the current array to the first outlet
+}
+
+// Initialize outlets: 
+// Outlet 0 is for the list of pitch classes
+// Outlet 1 is for the quantized pitch output
+outlets = 2;
